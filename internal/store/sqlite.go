@@ -215,3 +215,96 @@ func (s *Store) UpsertPost(p *Post) error {
 	_, err := s.db.Exec(query, p.Slug, p.Title, p.Summary, p.HTML, p.RawMD, p.PublishedAt, p.UpdatedAt, p.Draft)
 	return err
 }
+
+// UpsertPosts batch upserts multiple posts
+func (s *Store) UpsertPosts(posts []*Post) error {
+	tx, err := s.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	// Prepare statement for post upserts
+	postStmt, err := tx.Prepare(`
+		INSERT INTO posts (slug, title, summary, html, raw_md, published_at, updated_at, draft)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+		ON CONFLICT(slug) DO UPDATE SET
+			title = excluded.title,
+			summary = excluded.summary,
+			html = excluded.html,
+			raw_md = excluded.raw_md,
+			published_at = excluded.published_at,
+			updated_at = excluded.updated_at,
+			draft = excluded.draft
+	`)
+	if err != nil {
+		return err
+	}
+	defer postStmt.Close()
+
+	for _, post := range posts {
+		_, err := postStmt.Exec(post.Slug, post.Title, post.Summary, post.HTML, post.RawMD, post.PublishedAt, post.UpdatedAt, post.Draft)
+		if err != nil {
+			return err
+		}
+	}
+
+	return tx.Commit()
+}
+
+// GetOrCreateTag gets existing tag or creates new one
+func (s *Store) GetOrCreateTag(name string) (*Tag, error) {
+	// Try to get existing tag
+	var tag Tag
+	err := s.db.QueryRow("SELECT id, name FROM tags WHERE name = ?", name).Scan(&tag.ID, &tag.Name)
+	if err == nil {
+		return &tag, nil
+	}
+
+	// Create new tag
+	result, err := s.db.Exec("INSERT INTO tags (name) VALUES (?)", name)
+	if err != nil {
+		return nil, err
+	}
+
+	id, err := result.LastInsertId()
+	if err != nil {
+		return nil, err
+	}
+
+	return &Tag{ID: int(id), Name: name}, nil
+}
+
+// LinkPostTags links a post to tags
+func (s *Store) LinkPostTags(postID int, tagNames []string) error {
+	if len(tagNames) == 0 {
+		return nil
+	}
+
+	tx, err := s.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	// Clear existing tags for this post
+	_, err = tx.Exec("DELETE FROM post_tags WHERE post_id = ?", postID)
+	if err != nil {
+		return err
+	}
+
+	// Add new tags
+	for _, tagName := range tagNames {
+		tag, err := s.GetOrCreateTag(tagName)
+		if err != nil {
+			return err
+		}
+
+		_, err = tx.Exec("INSERT INTO post_tags (post_id, tag_id) VALUES (?, ?)", postID, tag.ID)
+		if err != nil {
+			return err
+		}
+	}
+
+	return tx.Commit()
+}
