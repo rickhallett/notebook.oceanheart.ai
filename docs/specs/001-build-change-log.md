@@ -59,3 +59,35 @@
 ## Breaking Changes
 
 *No breaking changes - initial implementation*
+
+## Phase 01 Changes (Content Processing)
+
+### internal/content/loader.go
+- **Change**: Create content loader with front matter parsing and file system scanning
+- **Rationale**: Enable loading markdown files with YAML metadata from content directory
+- **Impact**: Core content ingestion capability
+- **Commit**: 3181cdb
+
+### internal/content/render.go  
+- **Change**: Implement markdown to HTML renderer with Chroma syntax highlighting
+- **Rationale**: Convert markdown content to styled HTML with code highlighting
+- **Impact**: Rich content presentation with GitHub-style rendering
+- **Commit**: 3181cdb
+
+### internal/store/sqlite.go (extended)
+- **Change**: Add batch operations, tag management, and post-tag linking
+- **Rationale**: Support efficient content storage and tag relationships
+- **Impact**: Enable complete content workflow with tagging system
+- **Commit**: 3181cdb
+
+### content/2025-09-12-welcome.md
+- **Change**: Add sample welcome post with psychology twist tags
+- **Rationale**: Demonstrate content format and special tag features
+- **Impact**: Provides example content for testing and demonstration
+- **Commit**: 3181cdb
+
+### Test files (loader_test.go, render_test.go, integration_test.go)
+- **Change**: Comprehensive test coverage for content processing pipeline
+- **Rationale**: Ensure reliability of markdown parsing, rendering, and storage
+- **Impact**: 11 additional tests covering all content functionality
+- **Commit**: 3181cdb
