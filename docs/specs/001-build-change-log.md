@@ -91,3 +91,29 @@
 - **Rationale**: Ensure reliability of markdown parsing, rendering, and storage
 - **Impact**: 11 additional tests covering all content functionality
 - **Commit**: 3181cdb
+
+## Phase 02 Changes (HTTP Handlers & Routing)
+
+### internal/http/handlers.go
+- **Change**: Create HTTP handlers for home, post, and tag routes with template rendering
+- **Rationale**: Enable web interface for serving processed content to users
+- **Impact**: Complete web server functionality with route-based content delivery
+- **Commit**: ea4bc98
+
+### internal/http/middleware.go  
+- **Change**: Implement middleware chain for logging, gzip, security, and caching
+- **Rationale**: Add production-ready middleware for performance and security
+- **Impact**: Professional web server with logging, compression, and security headers
+- **Commit**: ea4bc98
+
+### cmd/notebook/main.go (enhanced)
+- **Change**: Integrate HTTP server with content loading and route setup
+- **Rationale**: Complete server initialization with middleware chain and content caching
+- **Impact**: Functional blog engine that serves content via HTTP
+- **Commit**: ea4bc98
+
+### Test files (handlers_test.go, middleware_test.go)
+- **Change**: Comprehensive HTTP testing for handlers and middleware
+- **Rationale**: Ensure web server reliability and correct HTTP behavior
+- **Impact**: 9 additional tests covering all HTTP functionality
+- **Commit**: ea4bc98
