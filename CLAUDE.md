@@ -1,111 +1,126 @@
----
-description: Use Bun instead of Node.js, npm, pnpm, or vite.
-globs: "*.ts, *.tsx, *.html, *.css, *.js, *.jsx, package.json"
-alwaysApply: false
----
+# CLAUDE.md
 
-Default to using Bun instead of Node.js.
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-- Use `bun <file>` instead of `node <file>` or `ts-node <file>`
-- Use `bun test` instead of `jest` or `vitest`
-- Use `bun build <file.html|file.ts|file.css>` instead of `webpack` or `esbuild`
-- Use `bun install` instead of `npm install` or `yarn install` or `pnpm install`
-- Use `bun run <script>` instead of `npm run <script>` or `yarn run <script>` or `pnpm run <script>`
-- Bun automatically loads .env, so don't use dotenv.
+## Project Overview
 
-## APIs
+**notebook.oceanheart.ai** is a minimalist blog engine with multi-language development support:
+- **Primary**: Go-based blog engine with HTMX + SQLite
+- **Frontend**: Bun + TypeScript/React support
+- **Additional**: Python (UV) and Ruby environments
 
-- `Bun.serve()` supports WebSockets, HTTPS, and routes. Don't use `express`.
-- `bun:sqlite` for SQLite. Don't use `better-sqlite3`.
-- `Bun.redis` for Redis. Don't use `ioredis`.
-- `Bun.sql` for Postgres. Don't use `pg` or `postgres.js`.
-- `WebSocket` is built-in. Don't use `ws`.
-- Prefer `Bun.file` over `node:fs`'s readFile/writeFile
-- Bun.$`ls` instead of execa.
+## Development Commands
 
-## Testing
+### Go (Primary Blog Engine)
+```bash
+# Development server
+go run ./cmd/notebook
 
-Use `bun test` to run tests.
+# Build binary
+CGO_ENABLED=0 go build -ldflags "-s -w" -o bin/notebook ./cmd/notebook
 
-```ts#index.test.ts
-import { test, expect } from "bun:test";
+# Test
+go test ./...
 
-test("hello world", () => {
-  expect(1).toBe(1);
-});
+# Format code
+gofmt -s -w .
 ```
 
-## Frontend
+### Bun/TypeScript (Frontend)
+```bash
+# Install dependencies
+bun install
 
-Use HTML imports with `Bun.serve()`. Don't use `vite`. HTML imports fully support React, CSS, Tailwind.
-
-Server:
-
-```ts#index.ts
-import index from "./index.html"
-
-Bun.serve({
-  routes: {
-    "/": index,
-    "/api/users/:id": {
-      GET: (req) => {
-        return new Response(JSON.stringify({ id: req.params.id }));
-      },
-    },
-  },
-  // optional websocket support
-  websocket: {
-    open: (ws) => {
-      ws.send("Hello, world!");
-    },
-    message: (ws, message) => {
-      ws.send(message);
-    },
-    close: (ws) => {
-      // handle close
-    }
-  },
-  development: {
-    hmr: true,
-    console: true,
-  }
-})
-```
-
-HTML files can import .tsx, .jsx or .js files directly and Bun's bundler will transpile & bundle automatically. `<link>` tags can point to stylesheets and Bun's CSS bundler will bundle.
-
-```html#index.html
-<html>
-  <body>
-    <h1>Hello, world!</h1>
-    <script type="module" src="./frontend.tsx"></script>
-  </body>
-</html>
-```
-
-With the following `frontend.tsx`:
-
-```tsx#frontend.tsx
-import React from "react";
-
-// import .css files directly and it works
-import './index.css';
-
-import { createRoot } from "react-dom/client";
-
-const root = createRoot(document.body);
-
-export default function Frontend() {
-  return <h1>Hello, world!</h1>;
-}
-
-root.render(<Frontend />);
-```
-
-Then, run index.ts
-
-```sh
+# Run development server with hot reload
 bun --hot ./index.ts
+
+# Build frontend assets
+bun build <file.html|file.ts|file.css>
+
+# Run tests
+bun test
 ```
 
-For more information, read the Bun API docs in `node_modules/bun-types/docs/**.md`.
+### Python (UV)
+```bash
+# Python environment managed by UV
+uv run python main.py
+```
+
+### Ruby
+```bash
+# Ruby 3.0.0 environment
+bundle install  # if needed
+```
+
+## Architecture
+
+### Go Blog Engine Structure
+- `cmd/notebook/main.go` - Server entry point, routing, configuration
+- `internal/http/` - HTTP handlers and middleware
+- `internal/store/` - SQLite data access layer
+- `internal/content/` - Markdown processing and rendering
+- `internal/view/` - Templates and static assets
+- `migrations/*.sql` - Database schema migrations
+- `content/` - Markdown blog posts with front matter
+
+### Data Flow
+1. Markdown files in `/content` with YAML front matter
+2. Content loader parses and renders to HTML (goldmark + chroma highlighting)
+3. SQLite caches rendered content with metadata
+4. HTMX provides progressive enhancement for search/pagination
+5. Templates render server-side HTML with partial updates
+
+### Key Technologies
+- **Backend**: Go net/http, SQLite, goldmark (markdown), chroma (syntax highlighting)
+- **Frontend**: HTMX (no SPA), minimal CSS (~3KB), progressive enhancement
+- **Content**: Markdown + YAML front matter, tag system with psychology twist (cognitive-skill:*, bias:*)
+- **Deployment**: Single binary, Docker support, static asset serving
+
+## Environment Variables
+
+```bash
+ENV=dev                                    # Show drafts, enable admin endpoints
+DB_PATH=./notebook.db                      # SQLite database location
+CONTENT_DIR=./content                      # Markdown files directory
+SITE_BASEURL=https://notebook.oceanheart.ai # Base URL for feeds/sitemaps
+SITE_TITLE="Oceanheart Notebook"          # Site title
+```
+
+## Key Routes & Features
+
+- `GET /` - Home page with HTMX pagination
+- `GET /p/:slug` - Individual post pages
+- `GET /tag/:name` - Tag filtering
+- `GET /search?q=...` - HTMX search with partial results
+- `GET /feed.xml` - Atom/RSS feed
+- `POST /admin/reindex` - Reload content (dev mode)
+- `POST /admin/flush-cache` - Clear HTML cache (dev mode)
+
+## Content Format
+
+Blog posts use markdown with YAML front matter:
+```markdown
+---
+title: "Post Title"
+date: "2025-09-12"
+tags: ["go", "architecture", "cognitive-skill:abstraction"]
+summary: "Post summary for SEO and listings"
+draft: false
+---
+
+Your markdown content here with ```go code blocks``` for highlighting.
+```
+
+Special tag prefixes:
+- `cognitive-skill:*` - Rendered as colored ribbons
+- `bias:*` - Psychology-themed tags with visual treatment
+
+## Development Notes
+
+- Project uses Bun instead of Node.js for TypeScript/frontend work
+- Go code follows standard project layout with internal packages
+- SQLite provides both storage and caching layer
+- HTMX eliminates need for complex frontend framework
+- Single binary deployment with embedded assets
+- Content is file-system based but cached in database for performance
