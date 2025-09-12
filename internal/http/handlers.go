@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"notebook.oceanheart.ai/internal/config"
+	"notebook.oceanheart.ai/internal/feed"
 	"notebook.oceanheart.ai/internal/store"
 )
 
@@ -40,6 +41,17 @@ func (s *Server) loadTemplates() {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{.Title}} - {{.SiteTitle}}</title>
     <meta name="description" content="{{.Description}}">
+    {{if .PublishedAt}}<meta name="article:published_time" content="{{.PublishedAt}}">{{end}}
+    {{if .UpdatedAt}}<meta name="article:modified_time" content="{{.UpdatedAt}}">{{end}}
+    <meta property="og:title" content="{{.Title}} - {{.SiteTitle}}">
+    <meta property="og:description" content="{{.Description}}">
+    <meta property="og:type" content="{{if .IsPost}}article{{else}}website{{end}}">
+    <meta property="og:url" content="{{.CanonicalURL}}">
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="{{.Title}} - {{.SiteTitle}}">
+    <meta name="twitter:description" content="{{.Description}}">
+    <link rel="canonical" href="{{.CanonicalURL}}">
+    <link rel="alternate" type="application/atom+xml" title="{{.SiteTitle}} Feed" href="{{.BaseURL}}/feed.xml">
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; line-height: 1.6; }
         h1, h2, h3 { color: #333; }
@@ -89,7 +101,7 @@ func (s *Server) HomeHandler(w http.ResponseWriter, r *http.Request) {
 	// Build post list HTML
 	var content strings.Builder
 	content.WriteString("<ul class=\"post-list\">")
-	
+
 	if len(posts) == 0 {
 		content.WriteString("<li>No posts found. Create some content in the /content directory!</li>")
 	}
@@ -105,11 +117,17 @@ func (s *Server) HomeHandler(w http.ResponseWriter, r *http.Request) {
 	content.WriteString("</ul>")
 
 	data := map[string]interface{}{
-		"Title":       "Home",
-		"SiteTitle":   s.cfg.SiteTitle,
-		"Description": "Learning in public blog",
-		"Content":     template.HTML(content.String()),
+		"Title":        "Home",
+		"SiteTitle":    s.cfg.SiteTitle,
+		"Description":  "Learning in public blog",
+		"Content":      template.HTML(content.String()),
+		"CanonicalURL": s.cfg.SiteBaseURL + "/",
+		"BaseURL":      s.cfg.SiteBaseURL,
+		"IsPost":       false,
 	}
+
+	// Set Content-Type header for HTML
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 
 	if err := s.tmpl.Execute(w, data); err != nil {
 		http.Error(w, "Template error", http.StatusInternalServerError)
@@ -145,11 +163,19 @@ func (s *Server) PostHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	data := map[string]interface{}{
-		"Title":       post.Title,
-		"SiteTitle":   s.cfg.SiteTitle,
-		"Description": post.Summary,
-		"Content":     template.HTML(post.HTML),
+		"Title":        post.Title,
+		"SiteTitle":    s.cfg.SiteTitle,
+		"Description":  post.Summary,
+		"Content":      template.HTML(post.HTML),
+		"CanonicalURL": s.cfg.SiteBaseURL + "/p/" + post.Slug,
+		"BaseURL":      s.cfg.SiteBaseURL,
+		"IsPost":       true,
+		"PublishedAt":  post.PublishedAt,
+		"UpdatedAt":    post.UpdatedAt,
 	}
+
+	// Set Content-Type header for HTML
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 
 	if err := s.tmpl.Execute(w, data); err != nil {
 		http.Error(w, "Template error", http.StatusInternalServerError)
@@ -175,11 +201,17 @@ func (s *Server) TagHandler(w http.ResponseWriter, r *http.Request) {
 	`, tagName)
 
 	data := map[string]interface{}{
-		"Title":       fmt.Sprintf("Tag: %s", tagName),
-		"SiteTitle":   s.cfg.SiteTitle,
-		"Description": fmt.Sprintf("Posts tagged with %s", tagName),
-		"Content":     template.HTML(content),
+		"Title":        fmt.Sprintf("Tag: %s", tagName),
+		"SiteTitle":    s.cfg.SiteTitle,
+		"Description":  fmt.Sprintf("Posts tagged with %s", tagName),
+		"Content":      template.HTML(content),
+		"CanonicalURL": s.cfg.SiteBaseURL + "/tag/" + tagName,
+		"BaseURL":      s.cfg.SiteBaseURL,
+		"IsPost":       false,
 	}
+
+	// Set Content-Type header for HTML
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 
 	if err := s.tmpl.Execute(w, data); err != nil {
 		http.Error(w, "Template error", http.StatusInternalServerError)
@@ -199,4 +231,64 @@ func (s *Server) StaticHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	http.NotFound(w, r)
+}
+
+// FeedHandler serves the Atom feed
+func (s *Server) FeedHandler(w http.ResponseWriter, r *http.Request) {
+	posts, err := s.store.GetAllPosts(s.cfg.IsDev())
+	if err != nil {
+		http.Error(w, "Failed to load posts for feed", http.StatusInternalServerError)
+		log.Printf("Error loading posts for feed: %v", err)
+		return
+	}
+
+	// Convert posts to pointers
+	var postPtrs []*store.Post
+	for i := range posts {
+		postPtrs = append(postPtrs, &posts[i])
+	}
+
+	// Generate Atom feed
+	atomXML, err := feed.GenerateAtom(postPtrs, s.cfg)
+	if err != nil {
+		http.Error(w, "Failed to generate feed", http.StatusInternalServerError)
+		log.Printf("Error generating feed: %v", err)
+		return
+	}
+
+	// Set headers
+	w.Header().Set("Content-Type", "application/atom+xml; charset=utf-8")
+	w.Header().Set("Cache-Control", "public, max-age=3600") // Cache for 1 hour
+	w.WriteHeader(http.StatusOK)
+	w.Write(atomXML)
+}
+
+// SitemapHandler serves the XML sitemap
+func (s *Server) SitemapHandler(w http.ResponseWriter, r *http.Request) {
+	posts, err := s.store.GetAllPosts(s.cfg.IsDev())
+	if err != nil {
+		http.Error(w, "Failed to load posts for sitemap", http.StatusInternalServerError)
+		log.Printf("Error loading posts for sitemap: %v", err)
+		return
+	}
+
+	// Convert posts to pointers
+	var postPtrs []*store.Post
+	for i := range posts {
+		postPtrs = append(postPtrs, &posts[i])
+	}
+
+	// Generate sitemap
+	sitemapXML, err := feed.GenerateSitemap(postPtrs, s.cfg)
+	if err != nil {
+		http.Error(w, "Failed to generate sitemap", http.StatusInternalServerError)
+		log.Printf("Error generating sitemap: %v", err)
+		return
+	}
+
+	// Set headers
+	w.Header().Set("Content-Type", "application/xml; charset=utf-8")
+	w.Header().Set("Cache-Control", "public, max-age=86400") // Cache for 24 hours
+	w.WriteHeader(http.StatusOK)
+	w.Write(sitemapXML)
 }

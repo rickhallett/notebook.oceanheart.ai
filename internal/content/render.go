@@ -53,6 +53,19 @@ func (r *Renderer) Render(markdown string) (string, error) {
 	return buf.String(), nil
 }
 
+// RenderWithLinkProcessing converts markdown to HTML and processes external links
+func (r *Renderer) RenderWithLinkProcessing(markdown string, baseURL string) (string, error) {
+	html, err := r.Render(markdown)
+	if err != nil {
+		return "", err
+	}
+	
+	// Process external links to add security attributes
+	processedHTML := ProcessExternalLinks(html, baseURL)
+	
+	return processedHTML, nil
+}
+
 // GetStyle returns CSS for syntax highlighting
 func (r *Renderer) GetStyle() (string, error) {
 	style := styles.Get("github")

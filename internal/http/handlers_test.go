@@ -242,6 +242,281 @@ func TestStaticHandler(t *testing.T) {
 	}
 }
 
+func TestSEOMetaTags(t *testing.T) {
+	// Create test database
+	tempDB := "test_seo.db"
+	defer os.Remove(tempDB)
+
+	db := store.MustOpen(tempDB)
+	defer db.Close()
+
+	cfg := &config.Config{
+		SiteTitle:   "SEO Test Blog",
+		SiteBaseURL: "https://example.com",
+		Environment: "test",
+	}
+
+	server := NewServer(db, cfg)
+
+	// Add a test post
+	post := &store.Post{
+		Slug:        "seo-test-post",
+		Title:       "SEO Test Post",
+		Summary:     "This is a test post for SEO meta tags",
+		HTML:        "<p>Test content</p>",
+		RawMD:       "Test content",
+		PublishedAt: "2025-09-12T10:00:00Z",
+		UpdatedAt:   "2025-09-12T10:00:00Z",
+		Draft:       false,
+	}
+
+	if err := db.UpsertPost(post); err != nil {
+		t.Fatalf("Failed to create test post: %v", err)
+	}
+
+	// Test home page SEO meta tags
+	t.Run("HomePage SEO", func(t *testing.T) {
+		req := httptest.NewRequest("GET", "/", nil)
+		w := httptest.NewRecorder()
+
+		server.HomeHandler(w, req)
+
+		if w.Code != http.StatusOK {
+			t.Errorf("Expected status 200, got %d", w.Code)
+		}
+
+		body := w.Body.String()
+
+		// Check basic meta tags
+		if !contains(body, `<meta name="viewport" content="width=device-width, initial-scale=1.0">`) {
+			t.Error("Expected viewport meta tag")
+		}
+
+		if !contains(body, `<meta name="description" content="Learning in public blog">`) {
+			t.Error("Expected description meta tag")
+		}
+
+		// Check Open Graph tags
+		if !contains(body, `<meta property="og:title" content="Home - SEO Test Blog">`) {
+			t.Error("Expected Open Graph title")
+		}
+
+		if !contains(body, `<meta property="og:type" content="website">`) {
+			t.Error("Expected Open Graph type")
+		}
+
+		if !contains(body, `<meta property="og:url" content="https://example.com/">`) {
+			t.Error("Expected Open Graph URL")
+		}
+
+		// Check canonical URL
+		if !contains(body, `<link rel="canonical" href="https://example.com/">`) {
+			t.Error("Expected canonical URL")
+		}
+	})
+
+	// Test post page SEO meta tags
+	t.Run("PostPage SEO", func(t *testing.T) {
+		req := httptest.NewRequest("GET", "/p/seo-test-post", nil)
+		w := httptest.NewRecorder()
+
+		server.PostHandler(w, req)
+
+		if w.Code != http.StatusOK {
+			t.Errorf("Expected status 200, got %d", w.Code)
+		}
+
+		body := w.Body.String()
+
+		// Check basic meta tags
+		if !contains(body, `<meta name="description" content="This is a test post for SEO meta tags">`) {
+			t.Error("Expected description meta tag with post summary")
+		}
+
+		// Check Open Graph tags
+		if !contains(body, `<meta property="og:title" content="SEO Test Post - SEO Test Blog">`) {
+			t.Error("Expected Open Graph title with post title")
+		}
+
+		if !contains(body, `<meta property="og:type" content="article">`) {
+			t.Error("Expected Open Graph type article for posts")
+		}
+
+		if !contains(body, `<meta property="og:url" content="https://example.com/p/seo-test-post">`) {
+			t.Error("Expected Open Graph URL with post URL")
+		}
+
+		if !contains(body, `<meta property="og:description" content="This is a test post for SEO meta tags">`) {
+			t.Error("Expected Open Graph description with post summary")
+		}
+
+		// Check article-specific meta tags
+		if !contains(body, `<meta name="article:published_time" content="2025-09-12T10:00:00Z">`) {
+			t.Error("Expected article published time")
+		}
+
+		// Check canonical URL
+		if !contains(body, `<link rel="canonical" href="https://example.com/p/seo-test-post">`) {
+			t.Error("Expected canonical URL for post")
+		}
+
+		// Check Twitter Card tags
+		if !contains(body, `<meta name="twitter:card" content="summary">`) {
+			t.Error("Expected Twitter card type")
+		}
+
+		if !contains(body, `<meta name="twitter:title" content="SEO Test Post - SEO Test Blog">`) {
+			t.Error("Expected Twitter title")
+		}
+
+		if !contains(body, `<meta name="twitter:description" content="This is a test post for SEO meta tags">`) {
+			t.Error("Expected Twitter description")
+		}
+	})
+
+	// Note: Tag page SEO testing skipped - tags functionality not yet implemented in store
+}
+
+func TestFeedHandler(t *testing.T) {
+	// Create test database
+	tempDB := "test_feed.db"
+	defer os.Remove(tempDB)
+
+	db := store.MustOpen(tempDB)
+	defer db.Close()
+
+	cfg := &config.Config{
+		SiteTitle:   "Feed Test Blog",
+		SiteBaseURL: "https://example.com",
+		Environment: "test",
+	}
+
+	server := NewServer(db, cfg)
+
+	// Add a test post
+	post := &store.Post{
+		Slug:        "feed-test-post",
+		Title:       "Feed Test Post",
+		Summary:     "This is a test post for feed generation",
+		HTML:        "<p>Test content</p>",
+		RawMD:       "Test content",
+		PublishedAt: "2025-09-12T10:00:00Z",
+		UpdatedAt:   "2025-09-12T10:00:00Z",
+		Draft:       false,
+	}
+
+	if err := db.UpsertPost(post); err != nil {
+		t.Fatalf("Failed to create test post: %v", err)
+	}
+
+	// Test feed generation
+	req := httptest.NewRequest("GET", "/feed.xml", nil)
+	w := httptest.NewRecorder()
+
+	server.FeedHandler(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("Expected status 200, got %d", w.Code)
+	}
+
+	// Check content type
+	contentType := w.Header().Get("Content-Type")
+	if !contains(contentType, "application/atom+xml") {
+		t.Errorf("Expected Atom XML content type, got: %s", contentType)
+	}
+
+	body := w.Body.String()
+
+	// Check feed structure
+	if !contains(body, `<?xml version="1.0" encoding="UTF-8"?>`) {
+		t.Error("Expected XML declaration")
+	}
+
+	if !contains(body, `<feed xmlns="http://www.w3.org/2005/Atom">`) {
+		t.Error("Expected Atom feed root element")
+	}
+
+	if !contains(body, `<title>Feed Test Blog</title>`) {
+		t.Error("Expected feed title")
+	}
+
+	if !contains(body, `<entry>`) {
+		t.Error("Expected feed entry")
+	}
+}
+
+func TestSitemapHandler(t *testing.T) {
+	// Create test database
+	tempDB := "test_sitemap.db"
+	defer os.Remove(tempDB)
+
+	db := store.MustOpen(tempDB)
+	defer db.Close()
+
+	cfg := &config.Config{
+		SiteTitle:   "Sitemap Test Blog",
+		SiteBaseURL: "https://example.com",
+		Environment: "test",
+	}
+
+	server := NewServer(db, cfg)
+
+	// Add a test post
+	post := &store.Post{
+		Slug:        "sitemap-test-post",
+		Title:       "Sitemap Test Post",
+		Summary:     "This is a test post for sitemap generation",
+		HTML:        "<p>Test content</p>",
+		RawMD:       "Test content",
+		PublishedAt: "2025-09-12T10:00:00Z",
+		UpdatedAt:   "2025-09-12T10:00:00Z",
+		Draft:       false,
+	}
+
+	if err := db.UpsertPost(post); err != nil {
+		t.Fatalf("Failed to create test post: %v", err)
+	}
+
+	// Test sitemap generation
+	req := httptest.NewRequest("GET", "/sitemap.xml", nil)
+	w := httptest.NewRecorder()
+
+	server.SitemapHandler(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("Expected status 200, got %d", w.Code)
+	}
+
+	// Check content type
+	contentType := w.Header().Get("Content-Type")
+	if !contains(contentType, "application/xml") {
+		t.Errorf("Expected XML content type, got: %s", contentType)
+	}
+
+	body := w.Body.String()
+
+	// Check sitemap structure
+	if !contains(body, `<?xml version="1.0" encoding="UTF-8"?>`) {
+		t.Error("Expected XML declaration")
+	}
+
+	if !contains(body, `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">`) {
+		t.Error("Expected sitemap urlset root element")
+	}
+
+	if !contains(body, `<loc>https://example.com/</loc>`) {
+		t.Error("Expected home page URL in sitemap")
+	}
+
+	if !contains(body, `<loc>https://example.com/p/sitemap-test-post</loc>`) {
+		t.Error("Expected post URL in sitemap")
+	}
+
+	if !contains(body, `<loc>https://example.com/feed.xml</loc>`) {
+		t.Error("Expected feed URL in sitemap")
+	}
+}
+
 // Helper function to check if string contains substring
 func contains(s, substr string) bool {
 	return len(s) >= len(substr) && 

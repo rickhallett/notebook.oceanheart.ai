@@ -48,6 +48,10 @@ func main() {
 	mux.HandleFunc("/tag/", server.TagHandler)
 	mux.HandleFunc("/static/", server.StaticHandler)
 
+	// SEO and feed routes
+	mux.HandleFunc("/feed.xml", server.FeedHandler)
+	mux.HandleFunc("/sitemap.xml", server.SitemapHandler)
+
 	// Health check endpoint
 	mux.HandleFunc("/healthz", healthCheckHandler)
 

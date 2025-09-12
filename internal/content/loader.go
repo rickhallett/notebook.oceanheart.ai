@@ -75,6 +75,11 @@ func (l *Loader) LoadFile(filePath string) (*store.Post, error) {
 
 // ParseContent parses markdown content with front matter
 func (l *Loader) ParseContent(content, filePath string) (*store.Post, error) {
+	return l.ParseContentWithBaseURL(content, filePath, "")
+}
+
+// ParseContentWithBaseURL parses markdown content with front matter and processes external links
+func (l *Loader) ParseContentWithBaseURL(content, filePath, baseURL string) (*store.Post, error) {
 	// Split front matter and content
 	frontMatter, markdown, err := l.splitFrontMatter(content)
 	if err != nil {
@@ -84,8 +89,13 @@ func (l *Loader) ParseContent(content, filePath string) (*store.Post, error) {
 	// Generate slug from filename
 	slug := l.generateSlug(filePath)
 
-	// Render markdown to HTML
-	html, err := l.renderer.Render(markdown)
+	// Render markdown to HTML with link processing
+	var html string
+	if baseURL != "" {
+		html, err = l.renderer.RenderWithLinkProcessing(markdown, baseURL)
+	} else {
+		html, err = l.renderer.Render(markdown)
+	}
 	if err != nil {
 		return nil, fmt.Errorf("failed to render markdown: %w", err)
 	}
