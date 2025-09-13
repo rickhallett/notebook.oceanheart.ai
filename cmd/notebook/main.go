@@ -52,6 +52,9 @@ func main() {
 	mux.HandleFunc("/feed.xml", server.FeedHandler)
 	mux.HandleFunc("/sitemap.xml", server.SitemapHandler)
 
+	// Admin/reload endpoint (dev allowed; prod requires token)
+	mux.HandleFunc("/admin/reload", server.AdminReloadHandler)
+
 	// Health check endpoint
 	mux.HandleFunc("/healthz", healthCheckHandler)
 

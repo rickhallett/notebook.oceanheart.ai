@@ -1,0 +1,23 @@
+{{define "pages/home.content"}}
+<header class="profile">
+    <h1>{{.SiteTitle}}</h1>
+    <h2>Learning in public blog</h2>
+    </header>
+<div id="list-page">
+    {{if .HasPosts}}
+        {{range .Posts}}
+        <section class="item">
+            <div>
+                <h1 class="title"><a href="/p/{{.Slug}}">{{.Title}}</a></h1>
+                <div class="date">{{.PublishedAt}}</div>
+            </div>
+            <div class="summary">{{.Summary}}</div>
+        </section>
+        {{end}}
+    {{else}}
+        <section class="item">
+            <div class="title">No posts found. Create some content in the /content directory!</div>
+        </section>
+    {{end}}
+</div>
+{{end}}
