@@ -1,0 +1,15 @@
+[Unit]
+Description=Oceanheart Notebook
+After=network.target
+
+[Service]
+EnvironmentFile=/etc/notebook.env
+ExecStart=/opt/notebook/notebook
+WorkingDirectory=/opt/notebook
+User=www-data
+Group=www-data
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
+
