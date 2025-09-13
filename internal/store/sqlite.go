@@ -3,8 +3,10 @@ package store
 import (
 	"database/sql"
 	"fmt"
+	"os"
 
 	_ "github.com/mattn/go-sqlite3"
+	_ "github.com/tursodatabase/libsql-client-go/libsql"
 )
 
 type Store struct {
@@ -28,11 +30,28 @@ type Tag struct {
 	Name string
 }
 
-// MustOpen opens a SQLite database and applies migrations
+// MustOpen opens a database (SQLite or Turso) based on environment variables
 func MustOpen(dbPath string) *Store {
-	db, err := sql.Open("sqlite3", dbPath)
-	if err != nil {
-		panic(fmt.Sprintf("failed to open database: %v", err))
+	var db *sql.DB
+	var err error
+
+	// Check if Turso credentials are available
+	dbURL := os.Getenv("DB_URL")
+	dbToken := os.Getenv("DB_AUTH_TOKEN")
+	
+	if dbURL != "" && dbToken != "" {
+		// Use Turso/libSQL  
+		dsn := fmt.Sprintf("%s?authToken=%s", dbURL, dbToken)
+		db, err = sql.Open("libsql", dsn)
+		if err != nil {
+			panic(fmt.Sprintf("failed to open Turso database: %v", err))
+		}
+	} else {
+		// Fall back to local SQLite
+		db, err = sql.Open("sqlite3", dbPath)
+		if err != nil {
+			panic(fmt.Sprintf("failed to open SQLite database: %v", err))
+		}
 	}
 
 	// Test connection
