@@ -178,6 +178,9 @@ func (s *Server) StaticHandler(w http.ResponseWriter, r *http.Request) {
     }
     fp := filepath.Join(base, clean)
     if st, err := os.Stat(fp); err == nil && !st.IsDir() {
+        if s.cfg.IsDev() {
+            w.Header().Set("Cache-Control", "no-store, max-age=0")
+        }
         http.ServeFile(w, r, fp)
         return
     }
