@@ -53,9 +53,48 @@ pre code {
   font-family: SFMono-Regular, Consolas, Liberation Mono, Menlo, Courier, monospace;
 }
 
-.highlight pre {
-  padding: 7px;
+/* Chroma Syntax Highlighting */
+.chroma {
+  background-color: #f8f8f8;
+  border: 1px solid #e1e4e8;
+  border-radius: 6px;
+  margin: 16px 0;
   overflow-x: auto;
+}
+
+.chroma pre {
+  margin: 0;
+  padding: 16px;
+  overflow-x: auto;
+  line-height: 1.45;
+  font-size: 14px;
+}
+
+.chroma code {
+  font-family: SFMono-Regular, Consolas, Liberation Mono, Menlo, Courier, monospace;
+  background: transparent;
+  border: none;
+  padding: 0;
+}
+
+/* Line numbers for Chroma */
+.chroma .ln {
+  color: #666;
+  user-select: none;
+  padding-right: 16px;
+  min-width: 2em;
+  text-align: right;
+  display: inline-block;
+}
+
+/* Legacy highlight support */
+.highlight pre {
+  padding: 16px;
+  overflow-x: auto;
+  background-color: #f8f8f8;
+  border: 1px solid #e1e4e8;
+  border-radius: 6px;
+  margin: 16px 0;
 }
 
 .highlight {

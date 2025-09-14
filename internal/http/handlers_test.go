@@ -292,7 +292,7 @@ func TestSEOMetaTags(t *testing.T) {
 			t.Error("Expected viewport meta tag")
 		}
 
-		if !contains(body, `<meta name="description" content="Learning in public blog">`) {
+		if !contains(body, `<meta name="description" content="Learning in public">`) {
 			t.Error("Expected description meta tag")
 		}
 
@@ -519,9 +519,9 @@ func TestSitemapHandler(t *testing.T) {
 
 // Helper function to check if string contains substring
 func contains(s, substr string) bool {
-	return len(s) >= len(substr) && 
-		   (s == substr || len(substr) == 0 || 
-		   indexOfSubstring(s, substr) >= 0)
+	return len(s) >= len(substr) &&
+		(s == substr || len(substr) == 0 ||
+			indexOfSubstring(s, substr) >= 0)
 }
 
 func indexOfSubstring(s, substr string) int {

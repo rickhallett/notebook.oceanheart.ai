@@ -9,10 +9,11 @@
 A single-binary blog engine built with **Go**, **SQLite**, and modern web standards. Content is **Markdown-first** with YAML front matter, featuring syntax highlighting, SEO optimization, and Atom feeds. Designed for speed, simplicity, and easy deployment.
 
 **Implementation Status:** Phase 04 Complete ✅
-- ✅ Phase 00: Core Infrastructure (Go, SQLite, config, health checks)
-- ✅ Phase 01: Content Processing (Markdown, YAML front matter, syntax highlighting) 
-- ✅ Phase 02: HTTP Server & Routing (handlers, templates, middleware)
-- ✅ Phase 04: Feeds & SEO Features (RSS/Atom, sitemap, meta tags, external links)
+- ✅ Phase 00: Core Infrastructure (Go, SQLite/libSQL, config, health checks)
+- ✅ Phase 01: Content Processing (Markdown, YAML front matter, syntax highlighting)
+- ✅ Phase 02: HTTP Server & Routing (handlers, middleware)
+- ✅ Phase 03: File-Based Templates, Static Assets, Admin Reload
+- ✅ Phase 04: Feeds & SEO Features (Atom, sitemap, meta tags, external links)
 
 ---
 
@@ -22,7 +23,7 @@ A single-binary blog engine built with **Go**, **SQLite**, and modern web standa
 * **Markdown posts** with YAML front matter (title, date, tags, summary, draft status)
 * **Syntax highlighting** using Chroma with GitHub theme and line numbers
 * **Draft system** - drafts only visible in development mode (`ENV=dev`)
-* **Fast SQLite storage** with automatic migrations and content caching
+* **SQLite + Turso (libSQL)** support with automatic migrations and content caching
 * **Single binary deployment** - no external dependencies
 
 ### SEO & Feeds (Phase 04 Complete)
@@ -36,6 +37,8 @@ A single-binary blog engine built with **Go**, **SQLite**, and modern web standa
 * **Comprehensive middleware chain** - logging, gzip, security headers, caching
 * **Goldmark renderer** with GitHub Flavored Markdown, footnotes
 * **External link security** - automatic processing for safety
+* **File-based templates** with dev-time hot reload
+* **Static assets** served from `internal/view/assets` (no-cache in dev)
 * **Extensive test coverage** - 39+ test functions across all packages
 * **"Psychology twist"** - cognitive skills and bias tags with special styling
 
@@ -55,13 +58,16 @@ A single-binary blog engine built with **Go**, **SQLite**, and modern web standa
   │   ├── middleware.go       # Middleware chain (logging, gzip, security, caching)
   │   └── middleware_test.go  # Middleware tests
   ├── store/                  # Data persistence
-  │   ├── sqlite.go           # SQLite operations, migrations
+  │   ├── sqlite.go           # SQLite/Turso (libSQL) operations, migrations
   │   └── sqlite_test.go      # Database tests
   ├── content/                # Content processing
   │   ├── loader.go           # Markdown file loading, front matter parsing
   │   ├── render.go           # Markdown → HTML rendering (Goldmark + Chroma)
   │   ├── links.go            # External link security processing
   │   └── *_test.go           # Comprehensive content tests
+  ├── view/                   # File-based templates and assets
+  │   ├── templates/          # HTML templates (layouts + pages)
+  │   └── assets/             # CSS and related assets
   └── feed/                   # SEO & syndication
       ├── atom.go             # Atom 1.0 feed generation
       ├── sitemap.go          # XML sitemap generation
@@ -74,9 +80,13 @@ go.mod                        # Go module dependencies
 
 ---
 
-## Database Schema
+## Database Schema & Backends
 
-SQLite database with automatic migrations:
+Backends:
+- Local: SQLite via `github.com/mattn/go-sqlite3` (default)
+- Remote: Turso (libSQL) via `github.com/tursodatabase/libsql-client-go` when `DB_URL` and `DB_AUTH_TOKEN` are set
+
+Schema (applied automatically via programmatic migration):
 
 ```sql
 -- Posts table with content caching
@@ -158,8 +168,8 @@ func main() {
 ### Public Routes
 - **`GET /`** - Home page with post listings
 - **`GET /p/{slug}`** - Individual post pages
-- **`GET /tag/{name}`** - Tag filtering (placeholder implementation)
-- **`GET /static/*`** - Static asset serving (placeholder)
+- **`GET /tag/{name}`** - Tag filtering (template in place; data wiring TBD)
+- **`GET /static/*`** - Static asset serving from `internal/view/assets`
 
 ### SEO & Syndication  
 - **`GET /feed.xml`** - Atom 1.0 feed (latest 20 posts)
@@ -167,6 +177,9 @@ func main() {
 
 ### System
 - **`GET /healthz`** - Health check endpoint returning JSON status
+- **`GET /admin/reload`** - Reloads content from `CONTENT_DIR` and upserts to DB
+  - Dev: allowed without auth
+  - Prod: requires `RELOAD_TOKEN` via `X-Reload-Token` header or `?token=...`
 
 ### Response Features
 - **Gzip compression** for text-based responses
@@ -208,8 +221,11 @@ func main() {
     // Route definitions
     mux.HandleFunc("/", server.HomeHandler)
     mux.HandleFunc("/p/", server.PostHandler)
+    mux.HandleFunc("/tag/", server.TagHandler)
+    mux.HandleFunc("/static/", server.StaticHandler)
     mux.HandleFunc("/feed.xml", server.FeedHandler)
     mux.HandleFunc("/sitemap.xml", server.SitemapHandler)
+    mux.HandleFunc("/admin/reload", server.AdminReloadHandler)
     mux.HandleFunc("/healthz", healthCheckHandler)
     
     // Apply comprehensive middleware chain
@@ -235,6 +251,7 @@ func main() {
 // go.mod - Key dependencies
 require (
     github.com/mattn/go-sqlite3 v1.14.32                          // SQLite driver
+    github.com/tursodatabase/libsql-client-go v0.0.x              // Turso/libSQL client
     github.com/yuin/goldmark v1.7.13                               // Markdown parser
     github.com/yuin/goldmark-highlighting/v2 v2.0.0-20230729...   // Syntax highlighting
     github.com/alecthomas/chroma/v2 v2.20.0                       // Code highlighter
@@ -245,10 +262,10 @@ require (
 
 ### Architecture Decisions
 - **Go standard library** for HTTP server (no external web frameworks)
-- **SQLite** for fast, zero-config persistence and caching
+- **SQLite/Turso (libSQL)** for persistence and caching (Turso optional; falls back to SQLite)
 - **Goldmark** for extensible, CommonMark-compliant markdown processing
 - **Chroma** for syntax highlighting with GitHub theme
-- **Embedded templates** for Phase 02 (file-based templates planned for Phase 03+)
+- **File-based templates** with dev-time reparse for instant feedback
 - **Comprehensive middleware** for production-ready HTTP handling
 
 ---
@@ -283,6 +300,11 @@ DB_PATH=./notebook.db                       # SQLite database file
 CONTENT_DIR=./content                       # Markdown files directory
 SITE_BASEURL=https://notebook.oceanheart.ai # Used in feeds/sitemaps
 SITE_TITLE="Oceanheart Notebook"            # Site title in feeds/meta
+RELOAD_TOKEN=                               # Optional: protects /admin/reload in prod
+
+# Optional: Turso (libSQL) remote database
+DB_URL=                                     # e.g. libsql://<db-name>-<org>.turso.io
+DB_AUTH_TOKEN=                              # Turso auth token
 ```
 
 ### Production Build
@@ -293,6 +315,14 @@ CGO_ENABLED=1 go build -ldflags "-s -w" -o notebook ./cmd/notebook
 
 # Run in production
 ./notebook
+
+# Container image (Dockerfile provided)
+docker build -t notebook:latest .
+docker run -p 8080:8080 --env ENV=prod notebook:latest
+
+# Fly.io
+fly launch   # once
+fly deploy
 ```
 
 ### Quick Start
@@ -301,6 +331,7 @@ CGO_ENABLED=1 go build -ldflags "-s -w" -o notebook ./cmd/notebook
 2. **Start server**: `go run ./cmd/notebook` 
 3. **View blog**: Open http://localhost:8080
 4. **Check feeds**: Visit http://localhost:8080/feed.xml and http://localhost:8080/sitemap.xml
+5. (Optional) **Dev hot reload**: `scripts/dev.sh` (requires `watchexec`, `reflex`, or `entr`)
 
 ---
 
@@ -362,12 +393,10 @@ go test -v ./internal/content
 
 ## Roadmap
 
-### Phase 03: Enhanced UI & Templating (Next)
-- File-based template system
-- Advanced styling and theming
-- Tag filtering implementation
+### Next
+- Tag filtering (wire DB relations to templates)
 - Search functionality
-- Static asset pipeline
+- Theming refinements
 
 ### Future Phases
 - HTMX progressive enhancement

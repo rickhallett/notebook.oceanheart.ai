@@ -3,7 +3,7 @@
 **notebook.oceanheart.ai** - A minimalist blog engine with multi-language development support
 
 Version: 0.1.0  
-Last Updated: 2025-09-12  
+Last Updated: 2025-09-13  
 Repository: https://github.com/rickhallett/notebook.oceanheart.ai
 
 ## Table of Contents
@@ -50,7 +50,8 @@ Go 1.22.7
 ├── goldmark v1.7.13          # Markdown processing
 ├── goldmark-highlighting     # Syntax highlighting  
 ├── chroma v2.20.0           # Code syntax themes
-├── sqlite3 v1.14.32         # Database driver
+├── sqlite3 v1.14.32         # SQLite database driver
+├── libsql-client-go         # Turso/libSQL client (optional)
 └── yaml.v3                  # YAML front matter parsing
 ```
 
@@ -129,8 +130,10 @@ notebook.oceanheart.ai/
 │   │   ├── sitemap.go
 │   │   └── *_test.go
 │   └── view/             # Templates and static assets
-│       ├── templates/    # HTML templates (future)
-│       └── assets/       # CSS/JS assets (future)
+│       ├── templates/    # HTML templates (layouts/pages/partials)
+│       │   ├── layouts/base.html
+│       │   └── pages/{home,post,tag}.html
+│       └── assets/       # CSS/JS assets (served under /static)
 ├── content/              # Markdown blog posts
 │   └── *.md             # Posts with YAML front matter
 ├── migrations/           # Database schema definitions
@@ -157,13 +160,17 @@ type Config struct {
     SiteBaseURL string  // Canonical URL for feeds/sitemaps
     SiteTitle   string  // Site branding
     Port        string  // HTTP server port
+    ReloadToken string  // Admin reload protection in prod
 }
 ```
 
 **Key Functions**:
 - `LoadConfig()`: Environment variable loading with defaults
 - `IsDev()`: Development mode detection
-- `IsAdmin()`: Admin endpoint enablement
+ - `IsAdmin()`: Admin endpoint enablement
+ - `AllowReload(token)`: AuthZ for reload endpoint (dev: allow; prod: token match)
+
+Note: Turso (libSQL) configuration (`DB_URL`, `DB_AUTH_TOKEN`) is read directly by the store package.
 
 #### 2. Content Processing (`internal/content/`)
 
@@ -191,7 +198,7 @@ type Config struct {
 
 #### 3. Data Persistence (`internal/store/`)
 
-**Purpose**: SQLite-based caching layer with automatic migrations
+**Purpose**: SQLite/Turso-based caching layer with automatic migrations
 
 **Core Types**:
 ```go
@@ -213,8 +220,12 @@ type Tag struct {
 }
 ```
 
+**Backends**:
+- SQLite (default) via `github.com/mattn/go-sqlite3`
+- Turso/libSQL via `github.com/tursodatabase/libsql-client-go` when `DB_URL` and `DB_AUTH_TOKEN` are present
+
 **Key Operations**:
-- `MustOpen()`: Database initialization with migrations
+- `MustOpen()`: Database initialization with migrations and backend selection
 - `UpsertPosts()`: Batch content caching
 - `GetPostBySlug()`: Individual post retrieval
 - `LinkPostTags()`: Many-to-many tag relationships
@@ -222,11 +233,13 @@ type Tag struct {
 #### 4. HTTP Layer (`internal/http/`)
 
 **handlers.go**:
-- `HomeHandler`: Post listing with pagination support
+- `HomeHandler`: Post listing
 - `PostHandler`: Individual post serving with draft filtering
-- `TagHandler`: Tag-based filtering (Phase 03)
+- `TagHandler`: Tag-based filtering (template wiring; DB relation hookup pending)
 - `FeedHandler`: Atom feed generation
 - `SitemapHandler`: XML sitemap generation
+- `StaticHandler`: Serves files from `internal/view/assets/` (`/static/*`)
+- `AdminReloadHandler`: Filesystem → DB cache reload (token required in prod)
 
 **middleware.go**:
 - `LoggingMiddleware`: Request timing and status logging
@@ -246,6 +259,17 @@ type Tag struct {
 - XML sitemap generation for SEO
 - URL priority and change frequency optimization
 - Last modification date tracking
+
+#### 6. View Layer (`internal/view/`)
+
+**manager.go**:
+- File-based templates rooted at `internal/view/templates`
+- Dev mode reparses templates on each request for instant feedback
+- `Execute(name, data)` renders layout; `RenderString(name, data)` renders partials/pages into strings
+
+**assets/**:
+- Static files served under `/static/*`
+- In dev, responses use `Cache-Control: no-store, max-age=0`
 
 ## Data Flow
 
@@ -289,13 +313,13 @@ HTTP Response (HTML/XML/JSON)
 ```
 New/Modified .md File
     ↓
-File System Monitoring (Manual in current version)
+Dev watcher (`scripts/dev.sh`) triggers `/admin/reload`
     ↓
-Content Loader Re-parsing
+Content Loader parses files → Posts
     ↓
-Database Cache Update
+Database Cache Upsert (batch)
     ↓
-Feed/Sitemap Regeneration
+Feeds/Sitemap read from DB on request
 ```
 
 ## Database Schema
@@ -371,6 +395,12 @@ Tag:
 | `GET` | `/healthz` | Health check | `application/json` |
 | `GET` | `/static/{file}` | Static assets | varies |
 
+### Admin Endpoints
+
+| Method | Path | Description | Auth |
+|--------|------|-------------|------|
+| `GET` | `/admin/reload` | Reloads content from `CONTENT_DIR` into DB (batch upsert) | Dev: open; Prod: `RELOAD_TOKEN` via header `X-Reload-Token` or `?token=` |
+
 ### Response Headers
 
 **Security Headers** (all responses):
@@ -392,6 +422,8 @@ Cache-Control: public, max-age=300
 # Feeds
 Cache-Control: public, max-age=3600
 ```
+
+Dev mode disables static asset caching: `Cache-Control: no-store, max-age=0` for `/static/*`.
 
 ### Error Handling
 
@@ -457,13 +489,16 @@ func main() {
 go run ./cmd/notebook
 
 # Build production binary
-CGO_ENABLED=0 go build -ldflags "-s -w" -o bin/notebook ./cmd/notebook
+CGO_ENABLED=1 go build -ldflags "-s -w" -o bin/notebook ./cmd/notebook
 
 # Run tests
 go test ./...
 
 # Format code
 gofmt -s -w .
+
+# Optional: hot-reload dev loop (requires watchexec/reflex/entr)
+scripts/dev.sh
 ```
 
 **Key Dependencies**:
@@ -516,7 +551,7 @@ bundle install
 
 ```bash
 # Build for production
-CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
+CGO_ENABLED=1 GOOS=linux GOARCH=amd64 \
   go build -ldflags "-s -w" -o notebook ./cmd/notebook
 
 # Deploy
@@ -533,6 +568,11 @@ CONTENT_DIR=./content
 SITE_BASEURL=https://notebook.oceanheart.ai
 SITE_TITLE="Oceanheart Notebook"
 PORT=8080
+RELOAD_TOKEN=
+
+# Optional Turso (libSQL)
+DB_URL=
+DB_AUTH_TOKEN=
 ```
 
 ### File System Layout
@@ -544,15 +584,22 @@ production/
 ├── content/             # Markdown files
 │   ├── 2025-09-12-welcome.md
 │   └── ...
-└── migrations/          # Schema files (embedded in binary)
+├── internal/view/assets/ # Static assets
+└── internal/view/templates/ # HTML templates
+
+### Containers & PaaS
+
+- Docker: Multi-stage build provided in `Dockerfile`
+- Fly.io: `fly.toml` configured for minimal deployment
+- Turso (optional): set `DB_URL` and `DB_AUTH_TOKEN`; falls back to SQLite otherwise
 ```
 
 ### Performance Characteristics
 
-- **Cold Start**: ~50ms (SQLite connection + content loading)
-- **Response Time**: ~5ms for cached content
-- **Memory Usage**: ~10MB base + content cache
-- **Disk Usage**: ~5MB binary + content + SQLite database
+- **Cold Start**: fast; DB ping + optional initial content load
+- **Response Time**: low single-digit ms for cached content
+- **Memory Usage**: small; templates reparsed in dev only
+- **Disk Usage**: small; single binary + content + SQLite/libSQL database
 
 ## Development Guidelines
 
@@ -624,10 +671,9 @@ func TestFeature(t *testing.T) {
 
 ### Future Development
 
-**Phase 03 Features** (Planned):
+**Near-Term Enhancements**:
 - HTMX-powered search and pagination
-- File-based template system
-- Tag filtering functionality
+- Tag filtering functionality (wire DB relations into views)
 - Admin panel for content management
 - Real-time content reloading
 

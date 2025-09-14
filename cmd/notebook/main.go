@@ -47,6 +47,7 @@ func main() {
 	mux.HandleFunc("/p/", server.PostHandler)
 	mux.HandleFunc("/tag/", server.TagHandler)
 	mux.HandleFunc("/static/", server.StaticHandler)
+	mux.HandleFunc("/static/chroma.css", server.ChromaCSSHandler)
 
 	// SEO and feed routes
 	mux.HandleFunc("/feed.xml", server.FeedHandler)
@@ -69,7 +70,7 @@ func main() {
 	// Start server
 	addr := ":" + cfg.Port
 	log.Printf("Starting server on %s (env=%s)", addr, cfg.Environment)
-	
+
 	srv := &http.Server{
 		Addr:    addr,
 		Handler: handler,
