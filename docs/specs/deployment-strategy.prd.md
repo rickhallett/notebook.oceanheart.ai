@@ -1,13 +1,13 @@
 # Deployment Strategy (PRD)
 
 ## Executive Summary
-Define a simple, reliable way to run the blog on a remote host behind a reverse proxy with clear dev/prod separation for SQLite DBs. Local authoring runs at `http://notebook.lvh.me:3010`; remote production is `https://notebook.oceanheart.ai`. Publishing is a one-command rsync + restart.
+Define a simple, reliable way to run the blog on a remote host behind a reverse proxy with clear dev/prod separation for SQLite DBs. Local authoring runs at `http://notebook.lvh.me:8080`; remote production is `https://notebook.oceanheart.ai`. Publishing is a one-command rsync + restart.
 
 ## Problem Statement
 We need a developer-friendly setup to: (1) run locally with drafts, (2) serve production with TLS, (3) manage separate SQLite DB files, and (4) publish new posts quickly without complex CI.
 
 ## Requirements
-- Domains: prod `notebook.oceanheart.ai`; local `notebook.lvh.me:3010`.
+- Domains: prod `notebook.oceanheart.ai`; local `notebook.lvh.me:8080`.
 - Reverse proxy: automatic TLS, small config, gzip, security headers.
 - DB: SQLite with distinct files for dev/prod; safe backups.
 - Ops: systemd service; health checks; easy restart/rollback.
@@ -76,10 +76,10 @@ No proxy needed: `lvh.me` resolves to `127.0.0.1`.
 ENV=dev PORT=3010 \
 DB_PATH=./notebook.dev.db \
 CONTENT_DIR=./content \
-SITE_BASEURL=http://notebook.lvh.me:3010 \
+SITE_BASEURL=http://notebook.lvh.me:8080 \
 go run ./cmd/notebook
 ```
-Open: `http://notebook.lvh.me:3010` (drafts visible in dev mode).
+Open: `http://notebook.lvh.me:8080` (drafts visible in dev mode).
 
 ### Publish Workflow (simple and effective)
 - Build locally (optional): `go build -o notebook ./cmd/notebook`

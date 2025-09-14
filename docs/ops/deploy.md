@@ -1,6 +1,6 @@
 # Deploy Guide
 
-This guide sets up production at `https://notebook.oceanheart.ai` with Caddy, systemd, and a simple publish workflow. Local dev runs at `http://notebook.lvh.me:3010`.
+This guide sets up production at `https://notebook.oceanheart.ai` with Caddy, systemd, and a simple publish workflow. Local dev runs at `http://notebook.lvh.me:8080`.
 
 ## 1) Prepare the host
 ```bash
@@ -48,10 +48,10 @@ Caddyfile (provided in docs/ops/Caddyfile) minimally proxies to `127.0.0.1:8080`
 ENV=dev PORT=3010 \
 DB_PATH=./notebook.dev.db \
 CONTENT_DIR=./content \
-SITE_BASEURL=http://notebook.lvh.me:3010 \
+SITE_BASEURL=http://notebook.lvh.me:8080 \
 go run ./cmd/notebook
 ```
-Visit: http://notebook.lvh.me:3010 (drafts visible).
+Visit: http://notebook.lvh.me:8080 (drafts visible).
 
 ## 6) Publish workflow
 Use the helper script to sync content and binary, then restart the service:

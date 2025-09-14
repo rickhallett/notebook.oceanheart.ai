@@ -30,7 +30,7 @@ Current workflow requires manual restarts or hitting the reload endpoint to pick
   # Terminal 1: restart on Go changes
   watchexec -r -e go -- ENV=dev PORT=3010 \
     DB_PATH=./notebook.dev.db CONTENT_DIR=./content \
-    SITE_BASEURL=http://notebook.lvh.me:3010 \
+    SITE_BASEURL=http://notebook.lvh.me:8080 \
     go run ./cmd/notebook
 
   # Terminal 2: reload on Markdown changes
@@ -39,7 +39,7 @@ Current workflow requires manual restarts or hitting the reload endpoint to pick
   ```
 - Example with reflex:
   ```bash
-  reflex -r '\\.(go)$' -- sh -c 'ENV=dev PORT=3010 DB_PATH=./notebook.dev.db CONTENT_DIR=./content SITE_BASEURL=http://notebook.lvh.me:3010 go run ./cmd/notebook'
+  reflex -r '\\.(go)$' -- sh -c 'ENV=dev PORT=3010 DB_PATH=./notebook.dev.db CONTENT_DIR=./content SITE_BASEURL=http://notebook.lvh.me:8080 go run ./cmd/notebook'
   reflex -r '\\.(md)$'  -- sh -c 'curl -fsS http://localhost:3010/admin/reload >/dev/null || true'
   ```
 - CSS & Templates:

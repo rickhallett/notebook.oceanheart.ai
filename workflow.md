@@ -7,10 +7,10 @@
   ENV=dev PORT=3010 \
   DB_PATH=./notebook.dev.db \
   CONTENT_DIR=./content \
-  SITE_BASEURL=http://notebook.lvh.me:3010 \
+  SITE_BASEURL=http://notebook.lvh.me:8080 \
   go run ./cmd/notebook
   ```
-- Visit: `http://notebook.lvh.me:3010` (drafts visible in dev).
+- Visit: `http://notebook.lvh.me:8080` (drafts visible in dev).
 
 ### Create a Post
 - Location: `content/`
@@ -35,7 +35,7 @@
 - Dev shows drafts and should reflect changes quickly.
 - To reload content without restarting the server (dev):
   ```bash
-  curl http://notebook.lvh.me:3010/admin/reload
+  curl http://notebook.lvh.me:8080/admin/reload
   ```
 - Verify at `/` and `/p/<slug>`; check code blocks, links, and summaries.
 
