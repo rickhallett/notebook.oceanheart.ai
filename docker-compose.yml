@@ -1,0 +1,33 @@
+version: '3.8'
+
+services:
+  notebook:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      - ENV=dev
+      - PORT=8080
+      - DB_PATH=/app/data/notebook.dev.db
+      - CONTENT_DIR=/app/content
+      - SITE_BASEURL=http://localhost:8080
+      - SITE_TITLE=Oceanheart Notebook (Dev)
+    volumes:
+      # Mount content directory for live editing
+      - ./content:/app/content:ro
+      # Mount templates and assets for development
+      - ./internal/view/templates:/app/internal/view/templates:ro
+      - ./internal/view/assets:/app/internal/view/assets:ro
+      # Persist database between container restarts
+      - notebook-data:/app/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+
+volumes:
+  notebook-data:
