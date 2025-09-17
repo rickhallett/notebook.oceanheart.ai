@@ -7,14 +7,14 @@ set -euo pipefail
 #
 # Requirements: one of watchexec, reflex, or entr
 
-PORT=${PORT:-3010}
+PORT=${PORT:-8080}
 DB_PATH=${DB_PATH:-"./notebook.dev.db"}
 CONTENT_DIR=${CONTENT_DIR:-"./content"}
 SITE_BASEURL=${SITE_BASEURL:-"http://notebook.lvh.me:${PORT}"}
 
 has_cmd() { command -v "$1" >/dev/null 2>&1; }
 
-echo "Dev server: http://notebook.lvh.me:${PORT}"
+echo "Dev server: http://localhost:${PORT}"
 
 cleanup() {
   jobs -p | xargs -r kill 2>/dev/null || true
