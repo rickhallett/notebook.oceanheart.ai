@@ -288,6 +288,9 @@ ENV=dev ./notebook
 
 # Or run directly with go
 ENV=dev go run ./cmd/notebook
+
+# Hot reload development (requires watchexec, reflex, or entr)
+./scripts/dev.sh
 ```
 
 ### Environment Configuration
@@ -315,23 +318,21 @@ CGO_ENABLED=1 go build -ldflags "-s -w" -o notebook ./cmd/notebook
 
 # Run in production
 ./notebook
-
-# Container image (Dockerfile provided)
-docker build -t notebook:latest .
-docker run -p 8080:8080 --env ENV=prod notebook:latest
-
-# Fly.io
-fly launch   # once
-fly deploy
 ```
 
 ### Quick Start
 
-1. **Add content**: Create markdown files in `/content/` with YAML front matter
+1. **Add content**: Create markdown files in `/content/` with YAML front matter (see existing examples)
 2. **Start server**: `go run ./cmd/notebook` 
 3. **View blog**: Open http://localhost:8080
 4. **Check feeds**: Visit http://localhost:8080/feed.xml and http://localhost:8080/sitemap.xml
-5. (Optional) **Dev hot reload**: `scripts/dev.sh` (requires `watchexec`, `reflex`, or `entr`)
+5. **Dev hot reload**: `./scripts/dev.sh` (requires `watchexec`, `reflex`, or `entr` for auto-restart on changes)
+
+**Sample Content**: The repository includes several example posts demonstrating:
+- Technical debugging stories with cognitive skill tags
+- HSTS and reverse proxy problem-solving
+- Development workflow documentation
+- Psychology-themed tag system (`cognitive-skill:*`, `bias:*`)
 
 ---
 
@@ -422,6 +423,87 @@ go mod tidy
 # View module graph
 go mod graph
 ```
+
+---
+
+## Docker Deployment
+
+### Production Docker
+
+```bash
+# Build and run with Docker
+docker build -t notebook:latest .
+docker run -p 8080:8080 --env ENV=production notebook:latest
+
+# With custom environment variables
+docker run -p 8080:8080 \
+  --env ENV=production \
+  --env SITE_BASEURL=https://your-domain.com \
+  --env SITE_TITLE="Your Blog Title" \
+  -v /path/to/data:/app/data \
+  notebook:latest
+```
+
+### Development with Docker Compose
+
+```bash
+# Start development environment
+docker compose up --build
+
+# Access at http://localhost:8080
+# Content changes are live-reloaded
+# Database persists between container restarts
+```
+
+**Features:**
+- Multi-stage build for optimized production image
+- Non-root user execution for security
+- Health checks included
+- Volume mounts for development hot-reloading
+- Persistent data storage
+
+### Platform Deployment
+
+```bash
+# Fly.io deployment (requires fly.toml configuration)
+fly launch   # Initial setup
+fly deploy   # Deploy updates
+
+# Other platforms can use the Docker image
+docker build -t notebook:latest .
+# Push to your registry and deploy
+```
+
+### Container Configuration
+
+- **Base Image**: `debian:bookworm-slim` (production runtime)
+- **Build Requirements**: `golang:1.22-bookworm` with CGO support
+- **Runtime Dependencies**: `ca-certificates`, `sqlite3`, `curl`
+- **Security**: Runs as non-root user (`app:10001`)
+- **Storage**: Database persists in `/app/data` volume
+- **Health Check**: HTTP check on port 8080 every 30 seconds
+
+---
+
+## Development Scripts
+
+### Hot Reload Development
+
+```bash
+# Auto-restart on Go changes, reload content on Markdown changes
+./scripts/dev.sh
+```
+
+**Requirements**: Install one of the following file watchers:
+- `watchexec`: `brew install watchexec` or `cargo install watchexec-cli`
+- `reflex`: `brew install reflex` or `go install github.com/cespare/reflex@latest`
+- `entr`: `brew install entr` or `sudo apt install entr`
+
+**Features:**
+- Server restart on `.go` file changes
+- Content reload on `.md` file changes (via `/admin/reload`)
+- Development server at `http://localhost:8080`
+- Separate development database (`notebook.dev.db`)
 
 ---
 
