@@ -182,22 +182,28 @@ h1:hover a, h2:hover a, h3:hover a, h4:hover a {
 
 /* Navigation */
 nav.navigation {
-  padding: 20px 20px 0;
+  padding: 20px 20px 10px;
   background: #fff;
   background: rgba(255, 255, 255, 0.9);
   margin: 0 auto;
-  text-align: right;
+  text-align: center;
   z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  flex-wrap: wrap;
 }
 
 nav.navigation a {
-  top: 8px;
-  right: 6px;
   padding: 8px 12px;
   color: #5badf0;
   font-size: 13px;
   line-height: 1.35;
+  text-decoration: none;
   border-radius: 3px;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 nav.navigation a:hover {
@@ -211,16 +217,19 @@ nav.navigation a.button {
 }
 
 nav.navigation a.tag-link {
-  padding: 4px 10px;
-  margin-left: 8px;
-  background: rgba(91, 173, 240, 0.1);
-  border-radius: 12px;
-  font-size: 12px;
-  transition: all 0.2s ease;
+  padding: 8px 12px;
+  background: none;
+  border: none;
+  border-radius: 0;
+  font-size: 13px;
+  transition: color 0.2s ease;
+  margin: 0;
+  color: #5badf0;
+  text-decoration: none;
 }
 
 nav.navigation a.tag-link:hover {
-  background: rgba(91, 173, 240, 0.2);
+  background: none;
   color: #0366d6;
 }
 
@@ -230,13 +239,128 @@ nav.navigation a.active {
 }
 
 nav.navigation a.tag-link.active {
-  background: #5badf0;
-  color: #fff;
+  background: none;
+  color: #0366d6;
+  font-weight: bold;
 }
 
 nav.navigation a.tag-link.active:hover {
-  background: #0366d6;
-  color: #fff;
+  background: none;
+  color: #0366d6;
+}
+
+/* Removed tag categorization - all tags display inline */
+
+/* Post Count Indicators - Hidden */
+.tag-count {
+  display: none;
+}
+
+/* Smooth Transitions - Simplified */
+.tag-link {
+  transition: color 0.2s ease;
+  transform: none;
+}
+
+.tag-link:hover {
+  transform: none;
+  box-shadow: none;
+}
+
+/* Tag Page Layout - matches home page */
+.tag-header {
+  text-align: center;
+  margin: 40px 0 20px 0;
+}
+
+.tag-header h2 {
+  font-size: 24px;
+  font-weight: 400;
+  color: #404040;
+}
+
+#tag-page {
+  max-width: 580px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+#tag-page .item {
+  margin: 12px 0;
+}
+
+#tag-page .title {
+  display: inline-block;
+  color: #404040;
+  font-size: 20px;
+  font-weight: 400;
+  margin: 0;
+  width: 80%;
+}
+
+#tag-page .title a {
+  color: #404040;
+  display: block;
+}
+
+#tag-page .title a:hover {
+  color: #0366d6;
+}
+
+#tag-page .date {
+  width: 20%;
+  float: right;
+  text-align: right;
+  position: relative;
+  top: 1px;
+  color: #bbb;
+}
+
+#tag-page .summary {
+  color: #757575;
+  margin-top: 12px;
+  word-break: normal;
+  overflow-wrap: anywhere;
+  margin-bottom: 36px;
+}
+
+/* Tag display on tag pages and post previews */
+.tags {
+  text-align: center;
+  margin: 1rem 0;
+}
+
+.tag {
+  display: inline-block;
+  margin: 0 0.5rem 0.5rem 0;
+  padding: 0.25rem 0.5rem;
+  background: transparent;
+  color: #5badf0;
+  text-decoration: none;
+  font-size: 0.9rem;
+  border-radius: 0;
+  transition: color 0.2s ease;
+}
+
+.tag:hover {
+  color: #0366d6;
+  background: transparent;
+}
+
+.back-link {
+  max-width: 580px;
+  margin: 40px auto;
+  padding: 0 24px;
+  text-align: center;
+}
+
+.back-link a {
+  color: #5badf0;
+  text-decoration: none;
+}
+
+.back-link a:hover {
+  color: #0366d6;
 }
 
 /* Profile/Header */
@@ -438,12 +562,14 @@ nav.navigation a.tag-link.active:hover {
 /* Responsive Design */
 @media (max-width: 700px) {
   nav.navigation {
-    padding: 20px 10px 0 0;
+    padding: 20px 10px 0 10px;
     background: #fff;
     background: rgba(255, 255, 255, 0.9);
     margin: 0 auto;
-    text-align: right;
     z-index: 100;
+    justify-content: center;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
   }
   
   nav.navigation a {
@@ -477,6 +603,55 @@ nav.navigation a.tag-link.active:hover {
     white-space: nowrap;
     -webkit-overflow-scrolling: touch;
   }
+}
+
+/* Enhanced Mobile Navigation for Tags */
+@media (max-width: 768px) {
+  nav.navigation {
+    overflow-x: auto;
+    padding-bottom: 8px;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    scrollbar-color: #ddd transparent;
+  }
+  
+  nav.navigation::-webkit-scrollbar {
+    height: 3px;
+  }
+  
+  nav.navigation::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  
+  nav.navigation::-webkit-scrollbar-thumb {
+    background: #ddd;
+    border-radius: 3px;
+  }
+  
+  .tag-category {
+    margin-left: 6px;
+    flex-shrink: 0;
+  }
+  
+  .tag-link {
+    font-size: 11px;
+    padding: 3px 8px;
+    margin-right: 4px;
+  }
+  
+  .tag-count {
+    font-size: 9px;
+    padding: 0px 3px;
+  }
+  
+  /* Touch-friendly targets */
+  .tag-link {
+    min-height: 28px;
+    display: inline-flex;
+    align-items: center;
+    touch-action: manipulation;
+  }
+}
   
   nav.navigation a.tag-link {
     display: inline-block;

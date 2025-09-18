@@ -24,9 +24,7 @@
     <nav class="navigation">
         <a href="/" class="{{if not .ActiveTag}}active{{end}}">Home</a>
         {{range .PopularTags}}
-        <a href="/tag/{{.Name}}" class="tag-link {{if eq $.ActiveTag .Name}}active{{end}}">
-            {{.Name}}
-        </a>
+        <a href="/tag/{{.Name}}" class="tag-link {{if eq $.ActiveTag .Name}}active{{end}}">{{.Name}}</a>
         {{end}}
     </nav>
     <main class="main">{{.Content}}</main>
