@@ -327,3 +327,41 @@ func (s *Store) LinkPostTags(postID int, tagNames []string) error {
 
 	return tx.Commit()
 }
+
+// PopularTag represents a tag with its usage count
+type PopularTag struct {
+	Name  string
+	Count int
+}
+
+// GetPopularTags returns the most popular tags by post count
+func (s *Store) GetPopularTags(limit int) ([]PopularTag, error) {
+	query := `
+		SELECT t.name, COUNT(pt.post_id) as post_count
+		FROM tags t
+		JOIN post_tags pt ON t.id = pt.tag_id
+		JOIN posts p ON pt.post_id = p.id
+		WHERE p.draft = 0 
+		  AND p.published_at <= datetime('now')
+		GROUP BY t.name
+		ORDER BY post_count DESC, t.name ASC
+		LIMIT ?
+	`
+	
+	rows, err := s.db.Query(query, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var tags []PopularTag
+	for rows.Next() {
+		var tag PopularTag
+		if err := rows.Scan(&tag.Name, &tag.Count); err != nil {
+			return nil, err
+		}
+		tags = append(tags, tag)
+	}
+
+	return tags, rows.Err()
+}
