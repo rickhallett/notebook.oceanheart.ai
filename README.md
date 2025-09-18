@@ -298,7 +298,7 @@ ENV=dev go run ./cmd/notebook
 ```bash
 # Default values (all optional)
 ENV=prod                                    # "dev" shows drafts
-PORT=8080                                   # Server port
+PORT=8003                                   # Server port
 DB_PATH=./notebook.db                       # SQLite database file
 CONTENT_DIR=./content                       # Markdown files directory
 SITE_BASEURL=https://notebook.oceanheart.ai # Used in feeds/sitemaps
@@ -324,8 +324,8 @@ CGO_ENABLED=1 go build -ldflags "-s -w" -o notebook ./cmd/notebook
 
 1. **Add content**: Create markdown files in `/content/` with YAML front matter (see existing examples)
 2. **Start server**: `go run ./cmd/notebook` 
-3. **View blog**: Open http://localhost:8080
-4. **Check feeds**: Visit http://localhost:8080/feed.xml and http://localhost:8080/sitemap.xml
+3. **View blog**: Open http://localhost:8003
+4. **Check feeds**: Visit http://localhost:8003/feed.xml and http://localhost:8003/sitemap.xml
 5. **Dev hot reload**: `./scripts/dev.sh` (requires `watchexec`, `reflex`, or `entr` for auto-restart on changes)
 
 **Sample Content**: The repository includes several example posts demonstrating:
@@ -433,10 +433,10 @@ go mod graph
 ```bash
 # Build and run with Docker
 docker build -t notebook:latest .
-docker run -p 8080:8080 --env ENV=production notebook:latest
+docker run -p 8003:8003 --env ENV=production notebook:latest
 
 # With custom environment variables
-docker run -p 8080:8080 \
+docker run -p 8003:8003 \
   --env ENV=production \
   --env SITE_BASEURL=https://your-domain.com \
   --env SITE_TITLE="Your Blog Title" \
@@ -450,7 +450,7 @@ docker run -p 8080:8080 \
 # Start development environment
 docker compose up --build
 
-# Access at http://localhost:8080
+# Access at http://localhost:8003
 # Content changes are live-reloaded
 # Database persists between container restarts
 ```
@@ -481,7 +481,7 @@ docker build -t notebook:latest .
 - **Runtime Dependencies**: `ca-certificates`, `sqlite3`, `curl`
 - **Security**: Runs as non-root user (`app:10001`)
 - **Storage**: Database persists in `/app/data` volume
-- **Health Check**: HTTP check on port 8080 every 30 seconds
+- **Health Check**: HTTP check on port 8003 every 30 seconds
 
 ---
 
@@ -502,7 +502,7 @@ docker build -t notebook:latest .
 **Features:**
 - Server restart on `.go` file changes
 - Content reload on `.md` file changes (via `/admin/reload`)
-- Development server at `http://localhost:8080`
+- Development server at `http://localhost:8003`
 - Separate development database (`notebook.dev.db`)
 
 ---
