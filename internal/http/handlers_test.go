@@ -195,8 +195,8 @@ func TestTagHandler(t *testing.T) {
 		t.Error("Expected page to contain tag name")
 	}
 
-	if !contains(body, "Phase 03") {
-		t.Error("Expected placeholder message for Phase 03")
+	if !contains(body, "Posts tagged:") {
+		t.Error("Expected posts tagged heading")
 	}
 
 	// Test invalid tag path

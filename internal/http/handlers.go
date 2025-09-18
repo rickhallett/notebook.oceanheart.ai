@@ -43,6 +43,16 @@ func (s *Server) getPopularTags() []store.PopularTag {
 	return tags
 }
 
+// getCategorizedTags retrieves popular tags grouped by category
+func (s *Server) getCategorizedTags() []store.CategoryGroup {
+	groups, err := s.store.GetCategorizedTags(15)
+	if err != nil {
+		log.Printf("Error loading categorized tags: %v", err)
+		return []store.CategoryGroup{}
+	}
+	return groups
+}
+
 // HomeHandler serves the home page with post listings
 func (s *Server) HomeHandler(w http.ResponseWriter, r *http.Request) {
 	// Only serve root path
@@ -66,9 +76,10 @@ func (s *Server) HomeHandler(w http.ResponseWriter, r *http.Request) {
 		"BaseURL":      s.cfg.SiteBaseURL,
 		"IsPost":       false,
 		"Posts":        posts,
-		"HasPosts":     len(posts) > 0,
-		"PopularTags":  s.getPopularTags(),
-		"ActiveTag":    "",
+		"HasPosts":        len(posts) > 0,
+		"PopularTags":     s.getPopularTags(),
+		"CategorizedTags": s.getCategorizedTags(),
+		"ActiveTag":       "",
 	}
 
 	// Set Content-Type header for HTML
@@ -123,9 +134,10 @@ func (s *Server) PostHandler(w http.ResponseWriter, r *http.Request) {
 		"IsPost":       true,
 		"PublishedAt":  post.PublishedAt,
 		"UpdatedAt":    post.UpdatedAt,
-		"Post":         post,
-		"PopularTags":  s.getPopularTags(),
-		"ActiveTag":    "",
+		"Post":            post,
+		"PopularTags":     s.getPopularTags(),
+		"CategorizedTags": s.getCategorizedTags(),
+		"ActiveTag":       "",
 	}
 
 	// Set Content-Type header for HTML
@@ -153,16 +165,26 @@ func (s *Server) TagHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Get posts with this tag
+	posts, err := s.store.GetPostsByTag(tagName)
+	if err != nil {
+		http.Error(w, "Database error", http.StatusInternalServerError)
+		log.Printf("Error fetching posts by tag %s: %v", tagName, err)
+		return
+	}
+
 	data := map[string]interface{}{
-		"Title":        fmt.Sprintf("Tag: %s", tagName),
-		"SiteTitle":    s.cfg.SiteTitle,
-		"Description":  fmt.Sprintf("Posts tagged with %s", tagName),
-		"CanonicalURL": s.cfg.SiteBaseURL + "/tag/" + tagName,
-		"BaseURL":      s.cfg.SiteBaseURL,
-		"IsPost":       false,
-		"Tag":          tagName,
-		"PopularTags":  s.getPopularTags(),
-		"ActiveTag":    tagName,
+		"Title":           fmt.Sprintf("Tag: %s", tagName),
+		"SiteTitle":       s.cfg.SiteTitle,
+		"Description":     fmt.Sprintf("Posts tagged with %s", tagName),
+		"CanonicalURL":    s.cfg.SiteBaseURL + "/tag/" + tagName,
+		"BaseURL":         s.cfg.SiteBaseURL,
+		"IsPost":          false,
+		"Tag":             tagName,
+		"Posts":           posts,
+		"PopularTags":     s.getPopularTags(),
+		"CategorizedTags": s.getCategorizedTags(),
+		"ActiveTag":       tagName,
 	}
 
 	// Set Content-Type header for HTML

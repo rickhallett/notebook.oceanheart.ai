@@ -375,8 +375,9 @@ func (s *Store) LinkPostTags(postID int, tagNames []string) error {
 
 // PopularTag represents a tag with its usage count
 type PopularTag struct {
-	Name  string
-	Count int
+	Name     string
+	Count    int
+	Category string // "cognitive", "bias", "technical", "general"
 }
 
 // GetPopularTags returns the most popular tags by post count
@@ -405,8 +406,138 @@ func (s *Store) GetPopularTags(limit int) ([]PopularTag, error) {
 		if err := rows.Scan(&tag.Name, &tag.Count); err != nil {
 			return nil, err
 		}
+		tag.Category = categorizeTag(tag.Name)
 		tags = append(tags, tag)
 	}
 
+	return tags, rows.Err()
+}
+
+// categorizeTag determines the category of a tag based on its name
+func categorizeTag(tagName string) string {
+	if len(tagName) > 15 && tagName[:15] == "cognitive-skill" {
+		return "cognitive"
+	}
+	if len(tagName) > 4 && tagName[:4] == "bias" {
+		return "bias"
+	}
+	// Technical tags are programming languages, frameworks, tools
+	technicalTags := map[string]bool{
+		"go": true, "javascript": true, "typescript": true, "python": true, "rust": true,
+		"react": true, "htmx": true, "sqlite": true, "docker": true, "rails": true,
+		"architecture": true, "backend": true, "frontend": true, "api": true, "database": true,
+		"performance": true, "security": true, "testing": true, "deployment": true,
+	}
+	if technicalTags[tagName] {
+		return "technical"
+	}
+	return "general"
+}
+
+// CategoryGroup represents a group of tags by category
+type CategoryGroup struct {
+	Category string
+	Tags     []PopularTag
+}
+
+// GetCategorizedTags returns popular tags grouped by category
+func (s *Store) GetCategorizedTags(limit int) ([]CategoryGroup, error) {
+	tags, err := s.GetPopularTags(limit)
+	if err != nil {
+		return nil, err
+	}
+	
+	// Group tags by category
+	categoryMap := make(map[string][]PopularTag)
+	for _, tag := range tags {
+		categoryMap[tag.Category] = append(categoryMap[tag.Category], tag)
+	}
+	
+	// Convert to ordered slice - prioritize cognitive and bias first
+	var groups []CategoryGroup
+	categoryOrder := []string{"cognitive", "bias", "technical", "general"}
+	
+	for _, category := range categoryOrder {
+		if tagList, exists := categoryMap[category]; exists && len(tagList) > 0 {
+			groups = append(groups, CategoryGroup{
+				Category: category,
+				Tags:     tagList,
+			})
+		}
+	}
+	
+	return groups, nil
+}
+
+// GetPostsByTag returns all posts that have the specified tag
+func (s *Store) GetPostsByTag(tagName string) ([]*Post, error) {
+	query := `
+		SELECT p.id, p.slug, p.title, p.summary, p.html, p.raw_md, 
+		       p.published_at, p.updated_at, p.draft
+		FROM posts p
+		JOIN post_tags pt ON p.id = pt.post_id
+		JOIN tags t ON pt.tag_id = t.id
+		WHERE t.name = ? 
+		  AND p.draft = 0 
+		  AND p.published_at <= datetime('now')
+		ORDER BY p.published_at DESC
+	`
+	
+	rows, err := s.db.Query(query, tagName)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	
+	var posts []*Post
+	for rows.Next() {
+		post := &Post{}
+		err := rows.Scan(
+			&post.ID, &post.Slug, &post.Title, &post.Summary,
+			&post.HTML, &post.RawMD, &post.PublishedAt,
+			&post.UpdatedAt, &post.Draft,
+		)
+		if err != nil {
+			return nil, err
+		}
+		
+		// Load tags for this post
+		tags, err := s.getPostTags(post.ID)
+		if err != nil {
+			return nil, err
+		}
+		post.Tags = tags
+		
+		posts = append(posts, post)
+	}
+	
+	return posts, rows.Err()
+}
+
+// getPostTags retrieves tags for a specific post ID
+func (s *Store) getPostTags(postID int) ([]string, error) {
+	query := `
+		SELECT t.name 
+		FROM tags t
+		JOIN post_tags pt ON t.id = pt.tag_id
+		WHERE pt.post_id = ?
+		ORDER BY t.name
+	`
+	
+	rows, err := s.db.Query(query, postID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	
+	var tags []string
+	for rows.Next() {
+		var tag string
+		if err := rows.Scan(&tag); err != nil {
+			return nil, err
+		}
+		tags = append(tags, tag)
+	}
+	
 	return tags, rows.Err()
 }
