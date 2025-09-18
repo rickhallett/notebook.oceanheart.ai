@@ -67,7 +67,7 @@ Date:   Sat Sep 13 15:02:11 2025 +0100
     - Add fly.toml configuration for London region deployment
     - Add .dockerignore for optimized build context
     - Add GitHub Actions workflow for automated deployment
-    - Configure for port 8080 with auto-scaling machines
+    - Configure for port 8003 with auto-scaling machines
 
 commit b4f63edcc1c8358de4a4fe2e0ea7810a0200e300
 Author: rickhallett <rickhallett@icloud.com>
