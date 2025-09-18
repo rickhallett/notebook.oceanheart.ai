@@ -23,6 +23,7 @@ type Post struct {
 	PublishedAt string
 	UpdatedAt   string
 	Draft       bool
+	Tags        []string // Tags associated with the post
 }
 
 type Tag struct {
@@ -262,9 +263,53 @@ func (s *Store) UpsertPosts(posts []*Post) error {
 	defer postStmt.Close()
 
 	for _, post := range posts {
-		_, err := postStmt.Exec(post.Slug, post.Title, post.Summary, post.HTML, post.RawMD, post.PublishedAt, post.UpdatedAt, post.Draft)
+		result, err := postStmt.Exec(post.Slug, post.Title, post.Summary, post.HTML, post.RawMD, post.PublishedAt, post.UpdatedAt, post.Draft)
 		if err != nil {
 			return err
+		}
+
+		// Get the post ID
+		postID, err := result.LastInsertId()
+		if err != nil {
+			// Try to get the ID by slug for existing posts
+			err = tx.QueryRow("SELECT id FROM posts WHERE slug = ?", post.Slug).Scan(&postID)
+			if err != nil {
+				return err
+			}
+		}
+
+		// Handle tags if present
+		if len(post.Tags) > 0 {
+			// Clear existing tags for this post
+			_, err = tx.Exec("DELETE FROM post_tags WHERE post_id = ?", postID)
+			if err != nil {
+				return err
+			}
+
+			// Add new tags
+			for _, tagName := range post.Tags {
+				// Get or create tag
+				var tagID int
+				err = tx.QueryRow("SELECT id FROM tags WHERE name = ?", tagName).Scan(&tagID)
+				if err != nil {
+					// Create new tag
+					result, err := tx.Exec("INSERT INTO tags (name) VALUES (?)", tagName)
+					if err != nil {
+						return err
+					}
+					id, err := result.LastInsertId()
+					if err != nil {
+						return err
+					}
+					tagID = int(id)
+				}
+
+				// Link post to tag
+				_, err = tx.Exec("INSERT INTO post_tags (post_id, tag_id) VALUES (?, ?)", postID, tagID)
+				if err != nil {
+					return err
+				}
+			}
 		}
 	}
 

@@ -115,6 +115,7 @@ func (l *Loader) ParseContentWithBaseURL(content, filePath, baseURL string) (*st
 		PublishedAt: publishedAt,
 		UpdatedAt:   time.Now().Format(time.RFC3339),
 		Draft:       frontMatter.Draft,
+		Tags:        frontMatter.Tags,
 	}
 
 	return post, nil
