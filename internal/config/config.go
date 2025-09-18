@@ -22,7 +22,7 @@ func LoadConfig() *Config {
         ContentDir:  getEnv("CONTENT_DIR", "./content"),
         SiteBaseURL: getEnv("SITE_BASEURL", "https://notebook.oceanheart.ai"),
         SiteTitle:   getEnv("SITE_TITLE", "Oceanheart Notebook"),
-        Port:        getEnv("PORT", "8080"),
+        Port:        getEnv("PORT", "8003"),
         ReloadToken: getEnv("RELOAD_TOKEN", ""),
     }
 }

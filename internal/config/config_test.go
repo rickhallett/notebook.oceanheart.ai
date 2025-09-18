@@ -14,8 +14,8 @@ func TestLoadConfig(t *testing.T) {
 	if cfg.DBPath != "./notebook.db" {
 		t.Errorf("Expected DB path './notebook.db', got %s", cfg.DBPath)
 	}
-	if cfg.Port != "8080" {
-		t.Errorf("Expected port '8080', got %s", cfg.Port)
+	if cfg.Port != "8003" {
+		t.Errorf("Expected port '8003', got %s", cfg.Port)
 	}
 
 	// Test environment variable override

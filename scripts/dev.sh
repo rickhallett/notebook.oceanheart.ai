@@ -7,7 +7,7 @@ set -euo pipefail
 #
 # Requirements: one of watchexec, reflex, or entr
 
-PORT=${PORT:-8080}
+PORT=${PORT:-8003}
 DB_PATH=${DB_PATH:-"./notebook.dev.db"}
 CONTENT_DIR=${CONTENT_DIR:-"./content"}
 SITE_BASEURL=${SITE_BASEURL:-"http://notebook.lvh.me:${PORT}"}
@@ -57,4 +57,3 @@ else
   echo "  brew install entr || sudo apt install entr" >&2
   exit 1
 fi
-
