@@ -212,11 +212,17 @@ type Post struct {
     PublishedAt string    // RFC3339 timestamp
     UpdatedAt   string    // RFC3339 timestamp
     Draft       bool      // Visibility flag
+    Tags        []string  // Tags from front matter
 }
 
 type Tag struct {
     ID   int
     Name string
+}
+
+type PopularTag struct {
+    Name  string
+    Count int  // Number of posts with this tag
 }
 ```
 
@@ -226,20 +232,22 @@ type Tag struct {
 
 **Key Operations**:
 - `MustOpen()`: Database initialization with migrations and backend selection
-- `UpsertPosts()`: Batch content caching
+- `UpsertPosts()`: Batch content caching with tag linking
 - `GetPostBySlug()`: Individual post retrieval
+- `GetPopularTags()`: Retrieve popular tags by post count for navigation
 - `LinkPostTags()`: Many-to-many tag relationships
 
 #### 4. HTTP Layer (`internal/http/`)
 
 **handlers.go**:
-- `HomeHandler`: Post listing
-- `PostHandler`: Individual post serving with draft filtering
-- `TagHandler`: Tag-based filtering (template wiring; DB relation hookup pending)
+- `HomeHandler`: Post listing with popular tags in navigation
+- `PostHandler`: Individual post serving with draft filtering and tag navigation
+- `TagHandler`: Tag-based filtering with active tag highlighting
 - `FeedHandler`: Atom feed generation
 - `SitemapHandler`: XML sitemap generation
 - `StaticHandler`: Serves files from `internal/view/assets/` (`/static/*`)
 - `AdminReloadHandler`: Filesystem → DB cache reload (token required in prod)
+- `getPopularTags()`: Helper method to load top tags for navigation
 
 **middleware.go**:
 - `LoggingMiddleware`: Request timing and status logging
@@ -267,8 +275,14 @@ type Tag struct {
 - Dev mode reparses templates on each request for instant feedback
 - `Execute(name, data)` renders layout; `RenderString(name, data)` renders partials/pages into strings
 
+**templates/layouts/base.html**:
+- Site-wide navigation with popular tags display
+- Active tag highlighting support
+- Responsive design for mobile tag scrolling
+
 **assets/**:
 - Static files served under `/static/*`
+- Tag navigation CSS styling with hover/active states
 - In dev, responses use `Cache-Control: no-store, max-age=0`
 
 ## Data Flow
@@ -567,7 +581,7 @@ DB_PATH=./notebook.db
 CONTENT_DIR=./content
 SITE_BASEURL=https://notebook.oceanheart.ai
 SITE_TITLE="Oceanheart Notebook"
-PORT=8080
+PORT=8003
 RELOAD_TOKEN=
 
 # Optional Turso (libSQL)
