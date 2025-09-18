@@ -33,6 +33,16 @@ func NewServer(store *store.Store, cfg *config.Config) *Server {
 // loadTemplates compiles all HTML templates
 func (s *Server) loadTemplates() {}
 
+// getPopularTags retrieves popular tags for navigation
+func (s *Server) getPopularTags() []store.PopularTag {
+	tags, err := s.store.GetPopularTags(10)
+	if err != nil {
+		log.Printf("Error loading popular tags: %v", err)
+		return []store.PopularTag{}
+	}
+	return tags
+}
+
 // HomeHandler serves the home page with post listings
 func (s *Server) HomeHandler(w http.ResponseWriter, r *http.Request) {
 	// Only serve root path
@@ -57,6 +67,8 @@ func (s *Server) HomeHandler(w http.ResponseWriter, r *http.Request) {
 		"IsPost":       false,
 		"Posts":        posts,
 		"HasPosts":     len(posts) > 0,
+		"PopularTags":  s.getPopularTags(),
+		"ActiveTag":    "",
 	}
 
 	// Set Content-Type header for HTML
@@ -112,6 +124,8 @@ func (s *Server) PostHandler(w http.ResponseWriter, r *http.Request) {
 		"PublishedAt":  post.PublishedAt,
 		"UpdatedAt":    post.UpdatedAt,
 		"Post":         post,
+		"PopularTags":  s.getPopularTags(),
+		"ActiveTag":    "",
 	}
 
 	// Set Content-Type header for HTML
@@ -147,6 +161,8 @@ func (s *Server) TagHandler(w http.ResponseWriter, r *http.Request) {
 		"BaseURL":      s.cfg.SiteBaseURL,
 		"IsPost":       false,
 		"Tag":          tagName,
+		"PopularTags":  s.getPopularTags(),
+		"ActiveTag":    tagName,
 	}
 
 	// Set Content-Type header for HTML
