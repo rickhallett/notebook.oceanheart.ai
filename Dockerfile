@@ -40,16 +40,16 @@ RUN mkdir -p /app/data && chown -R app:app /app
 USER app
 
 # Environment variables
-ENV PORT=8080
+ENV PORT=8003
 ENV ENV=production
 ENV DB_PATH=/app/data/notebook.db
 ENV CONTENT_DIR=/app/content
 ENV SITE_BASEURL=https://notebook.oceanheart.ai
 
-EXPOSE 8080
+EXPOSE 8003
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:8080/ || exit 1
+    CMD curl -f http://localhost:8003/ || exit 1
 
 CMD ["./notebook"]

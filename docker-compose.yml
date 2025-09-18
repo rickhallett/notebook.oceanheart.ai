@@ -6,13 +6,13 @@ services:
       context: .
       dockerfile: Dockerfile
     ports:
-      - "8080:8080"
+      - "8003:8003"
     environment:
       - ENV=dev
-      - PORT=8080
+      - PORT=8003
       - DB_PATH=/app/data/notebook.dev.db
       - CONTENT_DIR=/app/content
-      - SITE_BASEURL=http://localhost:8080
+      - SITE_BASEURL=http://localhost:8003
       - SITE_TITLE=Oceanheart Notebook (Dev)
     volumes:
       # Mount content directory for live editing
@@ -24,7 +24,7 @@ services:
       - notebook-data:/app/data
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/"]
+      test: ["CMD", "curl", "-f", "http://localhost:8003/"]
       interval: 30s
       timeout: 3s
       retries: 3

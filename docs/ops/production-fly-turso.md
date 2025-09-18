@@ -8,7 +8,7 @@
 ## Fly.io Deployment
 1) Prerequisites
 - Install: `flyctl auth login`
-- Repo contains: Dockerfile, `fly.toml` (internal port `8080`)
+- Repo contains: Dockerfile, `fly.toml` (internal port `8003`)
 
 2) Dockerfile (multi‑stage)
 ```Dockerfile
@@ -28,8 +28,8 @@ COPY --from=build /out/notebook ./notebook
 COPY content/ ./content/
 COPY internal/view/assets/ ./internal/view/assets/
 USER app
-ENV PORT=8080
-EXPOSE 8080
+ENV PORT=8003
+EXPOSE 8003
 CMD ["./notebook"]
 ```
 
@@ -37,7 +37,7 @@ CMD ["./notebook"]
 ```toml
 app = "notebook-oceanheart-ai"
 [http_service]
-  internal_port = 8080
+  internal_port = 8003
   force_https = true
   auto_stop_machines = true
   auto_start_machines = true
@@ -48,7 +48,7 @@ app = "notebook-oceanheart-ai"
 flyctl apps create notebook-oceanheart-ai
 # Set production env (SQLite for now)
 flyctl secrets set \
-  ENV=prod PORT=8080 \
+  ENV=prod PORT=8003 \
   DB_PATH=/data/notebook.db \
   CONTENT_DIR=/app/content \
   SITE_BASEURL=https://notebook.oceanheart.ai \
@@ -146,4 +146,3 @@ flyctl secrets set \
 ## Local Dev Options
 - Continue with on‑disk SQLite (`DB_PATH=./notebook.dev.db`).
 - Or use Turso embedded replica for closer parity and offline sync.
-

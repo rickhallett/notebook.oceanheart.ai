@@ -1,3 +1,18 @@
+# Git
+.git/
+.gitignore
+
+# Claude
+.claude/
+.cursor/
+
+# Go build cache
+bin/
+notebook
+main
+*.tar.gz
+*.zip
+
 # Python
 __pycache__/
 *.py[cod]

@@ -1,6 +1,6 @@
 # Deploy Guide
 
-This guide sets up production at `https://notebook.oceanheart.ai` with Caddy, systemd, and a simple publish workflow. Local dev runs at `http://notebook.lvh.me:8080`.
+This guide sets up production at `https://notebook.oceanheart.ai` with Caddy, systemd, and a simple publish workflow. Local dev runs at `http://notebook.lvh.me:8003`.
 
 ## 1) Prepare the host
 ```bash
@@ -16,7 +16,7 @@ sudo chown -R www-data:www-data /opt/notebook /var/lib/notebook
 Create `/etc/notebook.env`:
 ```bash
 ENV=prod
-PORT=8080
+PORT=8003
 DB_PATH=/var/lib/notebook/prod/notebook.db
 CONTENT_DIR=/opt/notebook/content
 SITE_BASEURL=https://notebook.oceanheart.ai
@@ -41,17 +41,17 @@ sudo cp docs/ops/Caddyfile /etc/caddy/Caddyfile
 sudo systemctl reload caddy || sudo systemctl restart caddy
 ```
 
-Caddyfile (provided in docs/ops/Caddyfile) minimally proxies to `127.0.0.1:8080` with gzip and automatic TLS.
+Caddyfile (provided in docs/ops/Caddyfile) minimally proxies to `127.0.0.1:8003` with gzip and automatic TLS.
 
 ## 5) Local development
 ```bash
 ENV=dev PORT=3010 \
 DB_PATH=./notebook.dev.db \
 CONTENT_DIR=./content \
-SITE_BASEURL=http://notebook.lvh.me:8080 \
+SITE_BASEURL=http://notebook.lvh.me:8003 \
 go run ./cmd/notebook
 ```
-Visit: http://notebook.lvh.me:8080 (drafts visible).
+Visit: http://notebook.lvh.me:8003 (drafts visible).
 
 ## 6) Publish workflow
 Use the helper script to sync content and binary, then restart the service:
